@@ -45,6 +45,7 @@ class Config:
         
         # 训练参数
         self.epochs = args.epochs  # 训练轮数
+        self.patience = args.patience  # 提前停止耐心值
         self.device = torch.device(args.device)  # 训练设备
         
         # 模型文件名
@@ -56,6 +57,7 @@ def parse_args():
                         help="运行模式: 训练(train), 测试(test), 可视化(visualize), 全部(all)")
     parser.add_argument("--batch_size", type=int, default=64, help="批处理大小")
     parser.add_argument("--epochs", type=int, default=50, help="训练轮数")
+    parser.add_argument("--patience", type=int, default=10, help="提前停止耐心值，连续多少个epoch无改善则停止")
     parser.add_argument("--lr", type=float, default=0.001, help="学习率")
     parser.add_argument("--weight_decay", type=float, default=1e-5, help="权重衰减")
     parser.add_argument("--model_dir", type=str, default="checkpoints", help="模型保存目录")
@@ -202,6 +204,11 @@ def test_model(args, model=None):
         # 加载模型权重
         model.load_state_dict(torch.load(model_path, map_location=device))
         print(f"Model loaded from: {model_path}")
+    else:
+        # 如果传入了模型，确保它在正确的设备上
+        if next(model.parameters()).device != device:
+            model = model.to(device)
+        print("Using provided model for testing")
     
     # 准备数据加载器
     _, _, test_loader = prepare_dataloaders(
@@ -397,9 +404,10 @@ def run_all(args):
     print("-"*50)
     model = train_model(args)
     
-    # 3. 测试模型
+    # 3. 测试模型 - 使用已有模型，不重新训练
     print("\nStep 3: Model Testing and Evaluation")
     print("-"*50)
+    # 传入已训练好的模型，防止重新训练
     test_model(args, model)
     
     print("\n="*50)

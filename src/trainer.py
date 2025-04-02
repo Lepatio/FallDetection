@@ -164,6 +164,8 @@ def train(model, train_loader, val_loader=None, criterion=None, optimizer=None, 
     }
     
     best_val_loss = float('inf')
+    patience = getattr(config, 'patience', 10)  # 提前停止的耐心值
+    early_stopping_counter = 0
     
     # 创建进度条
     train_progress = ProgressBar(
@@ -173,6 +175,7 @@ def train(model, train_loader, val_loader=None, criterion=None, optimizer=None, 
     
     # 确保config有epochs属性，如果没有就使用默认值
     epochs = getattr(config, 'epochs', 50)
+    print(f"Training for {epochs} epochs")
     
     # 保存完整路径
     # 确保config有model_name属性，如果没有就创建一个
@@ -220,7 +223,7 @@ def train(model, train_loader, val_loader=None, criterion=None, optimizer=None, 
             
             # 更新进度条
             train_progress.update(batch_idx + 1, suffix=f'Epoch: {epoch+1}/{epochs} | Loss: {train_loss/(batch_idx+1):.4f} | Acc: {100.*train_correct/train_total:.2f}%')
-            
+        
         # 计算训练指标
         epoch_train_loss = train_loss / len(train_loader)
         epoch_train_acc = train_correct / train_total
@@ -273,6 +276,15 @@ def train(model, train_loader, val_loader=None, criterion=None, optimizer=None, 
                 print(f"Validation loss decreased ({best_val_loss:.4f} --> {val_loss:.4f}). Saving model...")
                 best_val_loss = val_loss
                 torch.save(model.state_dict(), model_save_path)
+                early_stopping_counter = 0  # 重置早停计数器
+            else:
+                early_stopping_counter += 1
+                print(f"Validation loss did not improve. Early stopping counter: {early_stopping_counter}/{patience}")
+                
+                # 如果连续patience个epoch验证损失没有改善，则提前停止
+                if early_stopping_counter >= patience:
+                    print(f"Early stopping triggered after {epoch+1} epochs")
+                    break
         else:
             # 无验证集，仅保存训练历史
             history['train_loss'].append(epoch_train_loss)
