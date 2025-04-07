@@ -364,27 +364,52 @@ def plot_training_curves(train_losses, train_accs, val_losses, val_accs, args):
     plt.close()
 
 # 绘制混淆矩阵
-def plot_confusion_matrix(y_true, y_pred, args):
+def plot_confusion_matrix(y_true, y_pred, args, mode='test'):
     class_names = ['BKG', 'ALERT', 'FALL']
     cm = confusion_matrix(y_true, y_pred)
     
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
-                xticklabels=class_names, yticklabels=class_names)
-    plt.xlabel('预测类别')
-    plt.ylabel('真实类别')
-    plt.title('混淆矩阵')
-    plt.tight_layout()
-    plt.savefig(os.path.join(args.output_dir, 'confusion_matrix.png'))
+    # 计算百分比
+    cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 100
+    
+    plt.figure(figsize=(8, 8))
+    ax = sns.heatmap(
+        cm_percent, 
+        annot=True, 
+        fmt=".2f",
+        cmap='Blues',
+        cbar=True,
+        square=True,
+        annot_kws={'size': 12, 'weight': 'bold'},
+        xticklabels=class_names,
+        yticklabels=class_names,
+        linewidths=0.5,
+        linecolor='lightgray'
+    )
+    
+    # 修正中文标签
+    ax.set_xlabel('Predicted Label', fontsize=14, labelpad=15)  # 预测标签
+    ax.set_ylabel('True Label', fontsize=14, labelpad=15)       # 真实标签
+    ax.set_title('Classification Accuracy (%)', fontsize=16, pad=20)  # 分类准确率
+    
+    # 调整颜色条标签
+    cbar = ax.collections[0].colorbar
+    cbar.set_label('Accuracy (%)', fontsize=12, labelpad=10)
+    
+    # 设置刻度标签
+    ax.set_xticklabels(class_names, fontsize=12, rotation=0)
+    ax.set_yticklabels(class_names, fontsize=12, rotation=0)
+    
+    # 保存文件
+    plt.savefig(os.path.join(args.output_dir, f'{mode}_confusion_matrix.png'), dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 打印分类报告
-    report = classification_report(y_true, y_pred, target_names=class_names)
-    print("\n分类报告:")
+    # 打印分类报告（修正中文为英文）
+    report = classification_report(y_true, y_pred, target_names=class_names, digits=4)
+    print("\nClassification Report:")  # 修改为英文
     print(report)
     
-    # 保存分类报告到文件
-    with open(os.path.join(args.output_dir, 'classification_report.txt'), 'w') as f:
+    # 保存分类报告到文件（文件名保持英文）
+    with open(os.path.join(args.output_dir, f'{mode}_classification_report.txt'), 'w') as f:
         f.write(report)
 
 # 主函数
@@ -461,7 +486,7 @@ def main():
     print(f"\n测试准确率: {test_acc*100:.2f}%")
     
     # 绘制并保存混淆矩阵
-    plot_confusion_matrix(y_true, y_pred, args)
+    plot_confusion_matrix(y_true, y_pred, args, mode='test')
     
     print(f"\n训练完成! 最佳验证准确率: {best_val_acc*100:.2f}%, 测试准确率: {test_acc*100:.2f}%")
     print(f"结果保存在: {args.output_dir}")

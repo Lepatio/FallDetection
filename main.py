@@ -171,7 +171,7 @@ def train_model(args):
     print(f"\nTest accuracy: {test_acc*100:.2f}%")
     
     # 绘制并保存混淆矩阵
-    plot_confusion_matrix(y_true, y_pred, args)
+    plot_confusion_matrix(y_true, y_pred, args, mode='test')
     
     print(f"\nTraining completed! Best validation accuracy: {best_val_acc*100:.2f}%, Test accuracy: {test_acc*100:.2f}%")
     print(f"Results saved to: {args.output_dir}")
@@ -228,18 +228,17 @@ def test_model(args, model=None):
     test_loss, test_acc, y_true, y_pred = evaluate(model, test_loader, criterion, device, prefix="Test")
     print(f"\nTest accuracy: {test_acc*100:.2f}%")
     
-    # 绘制并保存混淆矩阵
-    os.makedirs(args.output_dir, exist_ok=True)
-    plot_confusion_matrix(y_true, y_pred, args)
+    # 绘制并保存混淆矩阵（英文标签）
+    plot_confusion_matrix(y_true, y_pred, args, mode='test')
     
-    # 计算每个类别的精确度和召回率
+    # 生成英文分类报告
     class_names = ['BKG', 'ALERT', 'FALL']
     from sklearn.metrics import classification_report
     report = classification_report(y_true, y_pred, target_names=class_names)
     print("\nClassification Report:")
     print(report)
     
-    # 保存分类报告到文件
+    # 保存英文报告
     with open(os.path.join(args.output_dir, 'test_classification_report.txt'), 'w') as f:
         f.write(report)
     
